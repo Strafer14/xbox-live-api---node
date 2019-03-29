@@ -3,13 +3,13 @@ es6 js introduced arrow functions and asynchronous flows. I've written an xbox l
 
 Requires a valid microsoft account.
 
-###Functionality:
+##Functionality:
 *Get*:
 - Xbox user id by username.
 - A user's clips (up to 200)
 - A user's screenshots (up to 200)
 
-######How to use:
+##How to use:
 `npm install async-xbox-live-api`
 Then:
 *pre-es6:*
@@ -24,17 +24,17 @@ xla.password = (xbox live password)
 ```
 
 Methods:
-######GetXuid
+##GetXuid
 ```
 xla.getXuid('Ninja').then((resp) => console.log(resp))
 ```
 
-######getClipsForGamer
+##getClipsForGamer
 ```
 xla.getClipsForGamer('Ninja').then((resp) => console.log(resp))
 ```
 
-######GetScreenshotsForGamer
+##GetScreenshotsForGamer
 ```
 xla.getScreenshotsForGamer('Ninja').then((resp) => console.log(resp))
 ```
