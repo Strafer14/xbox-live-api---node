@@ -3,7 +3,7 @@ es6 js introduced arrow functions and asynchronous flows. I've written an xbox l
 
 Requires a valid microsoft account.
 
-##Functionality:
+##Functionality:<br/>
 *Get*:
 - Xbox user id by username.
 - A user's clips (up to 200)
