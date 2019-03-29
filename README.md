@@ -10,11 +10,11 @@ Requires a valid microsoft account.
 - A user's screenshots (up to 200)
 
 ### How to use:
-`npm install async-xbox-live-api`
-Then:
-*pre-es6:*
-`var xla = require('xbox-live-api');`
-*es6:*
+`npm install async-xbox-live-api`<br/>
+Then:<br/>
+*pre-es6:*<br/>
+`var xla = require('xbox-live-api');`<br/>
+*es6:*<br/>
 `import xla from 'xbox-live-api';`
 
 Next you should insert your credentials for the microsoft account you want to connect to:<br/>
@@ -23,7 +23,7 @@ xla.username = (xbox live username)
 xla.password = (xbox live password)
 ```
 
-Methods:
+### Methods:
 #### GetXuid
 ```
 xla.getXuid('Ninja').then((resp) => console.log(resp))
