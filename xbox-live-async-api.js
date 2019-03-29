@@ -27,7 +27,7 @@ const parseCookies = (cookie) => {
     return cookies
 }
 
-fetchPreAuthData = async () => {
+const fetchPreAuthData = async () => {
     let url_post = null
         , ppft_re = null;
     // cache solution to store the tokens in cache
@@ -69,7 +69,7 @@ fetchPreAuthData = async () => {
     }
 }
 
-fetchInitialAccessToken = async () => {
+const fetchInitialAccessToken = async () => {
     let access_token = null
         , url_post = null
         , ppft_re = null
@@ -136,7 +136,7 @@ fetchInitialAccessToken = async () => {
     };
 };
 
-authenticate = async () => {
+const authenticate = async () => {
     let access_token = ''
         , token = ''
         , uhs = ''
@@ -194,7 +194,7 @@ authenticate = async () => {
     };
 }
 
-getAuthorization = async () => {
+const getAuthorization = async () => {
     let cookie = ''
         , xid = ''
         , token = ''
