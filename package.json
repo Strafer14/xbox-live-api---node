@@ -1,5 +1,5 @@
 {
-  "name": "xbox-live-async-api",
+  "name": "async-xbox-live-api",
   "version": "1.0.0",
   "description": "Async library to enable you to interact with the xbox live api",
   "main": "xbox-live-async-api.js",
@@ -20,6 +20,15 @@
   "author": "Michael Ostrovsky",
   "license": "ISC",
   "dependencies": {
+    "async-disk-cache": "^1.3.4",
+    "cookie": "^0.3.1",
+    "node-cache": "^4.2.0",
+    "querystring": "^0.2.0",
+    "request": "^2.88.0",
+    "request-promise": "^4.2.4",
+    "url": "^0.11.0"
+  },
+  "devDependencies": {
     "async-disk-cache": "^1.3.4",
     "cookie": "^0.3.1",
     "node-cache": "^4.2.0",
