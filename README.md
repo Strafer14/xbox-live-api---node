@@ -11,7 +11,8 @@ Requires a valid microsoft account.
 
 ### How to use:
 `npm install async-xbox-live-api`<br/>
-Then:<br/>
+<br/>
+##### Then:<br/>
 *pre-es6:*<br/>
 `var xla = require('xbox-live-api');`<br/>
 *es6:*<br/>
@@ -21,7 +22,7 @@ Next you should insert your credentials for the microsoft account you want to co
 ```
 xla.username = (xbox live username)
 xla.password = (xbox live password)
-```
+```<br/><br/>
 
 ### Methods:
 #### GetXuid
