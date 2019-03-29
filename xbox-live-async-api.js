@@ -116,6 +116,7 @@ const fetchInitialAccessToken = async () => {
             method: 'POST',
             resolveWithFullResponse: true,
             form: post_vals,
+            simple: false,
             headers: {
                 Cookie: cookie,
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -123,15 +124,19 @@ const fetchInitialAccessToken = async () => {
             },
         };
         const access_token_resp = await rp(request_options);
-        cookie = access_token_resp.headers['set-cookie'];
-        xlaCache.set('cookie', parseCookies(cookie));
-        try {
-            access_token = access_token_resp.headers.location.match(/access_token=(.+?)&/)[1]
-            xlaCache.set('access_token', access_token);
-            return access_token;
-        } catch (err) {
-            console.log(err)
-            throw 'Could not get access token, received 400'
+        if (access_token_resp.statusCode === 302 || access_token_resp.statusCode === 200) {
+            cookie = access_token_resp.headers['set-cookie'];
+            xlaCache.set('cookie', parseCookies(cookie));
+            try {
+                access_token = access_token_resp.headers.location.match(/access_token=(.+?)&/)[1]
+                xlaCache.set('access_token', access_token);
+                return access_token;
+            } catch (err) {
+                console.log(err)
+                throw 'Could not get find location header'
+            }
+        } else {
+            throw 'Could not get access token'
         }
     };
 };
