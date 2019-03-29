@@ -26,7 +26,7 @@ xla.password = (xbox live password)
 <br/>
 
 ### Methods:
-#### GetXuid
+#### getXuid
 ```
 xla.getXuid('Ninja').then((resp) => console.log(resp))
 ```
@@ -36,7 +36,7 @@ xla.getXuid('Ninja').then((resp) => console.log(resp))
 xla.getClipsForGamer('Ninja').then((resp) => console.log(resp))
 ```
 
-#### GetScreenshotsForGamer
+#### getScreenshotsForGamer
 ```
 xla.getScreenshotsForGamer('Ninja').then((resp) => console.log(resp))
 ```
