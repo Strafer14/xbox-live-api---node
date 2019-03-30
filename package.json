@@ -1,6 +1,6 @@
 {
   "name": "async-xbox-live-api",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Async library to enable you to interact with the xbox live api",
   "main": "xbox-live-async-api.js",
   "scripts": {
