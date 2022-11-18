@@ -102,7 +102,7 @@ export async function getScreenshotsForGamer(
   }
 
   const host = 'screenshotsmetadata.xboxlive.com';
-  const uri = `/users/xuid(${xuid})/screenshots?maxItems=200&continueToken=${
+  const uri = `/users/xuid(${xuid})/screenshots?maxItems=200&continuationToken=${
     continueToken ?? ''
   }`;
   const data = await makeXliveRequest<GetScreenshotsResponse>(host, uri);
