@@ -1,13 +1,13 @@
 import axios, { AxiosRequestConfig } from 'axios';
-import url from 'url';
 import querystring from 'querystring';
+import url from 'url';
 import { xlaCache } from './cache';
+import { AuthResponse, PreAuthResult } from './types';
 import {
   convertToTimestamp,
   extractUrlPostAndPpftRe,
   parseCookies
 } from './util';
-import { AuthResponse, PreAuthResult } from './types';
 
 const fetchPreAuthData = async (): Promise<PreAuthResult> => {
   // cache solution to store the tokens in cache
@@ -29,7 +29,8 @@ const fetchPreAuthData = async (): Promise<PreAuthResult> => {
   const postValuesQueryParams = unescape(querystring.stringify(postValues));
   const options = {
     headers: {
-      host: 'login.live.com'
+      // without a capitalized Host header this part won't work properly (won't show redirect_uri needed for the next part)
+      Host: 'login.live.com'
     }
   };
   const xruReq = await axios.get<string>(
@@ -81,8 +82,7 @@ const fetchInitialAccessToken = async (): Promise<string> => {
     const requestOptions: AxiosRequestConfig = {
       headers: {
         Cookie: cookie,
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36'
+        'User-Agent': ''
       }
       // {
       //   Cookie: cookie,
