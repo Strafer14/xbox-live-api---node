@@ -1,27 +1,29 @@
-# Asynchronous Node Xbox-Live API
-es6 js introduced arrow functions and asynchronous flows. I've written an xbox live api wrapper in node to be able to use this functionality for a cleaner code in your project.
+# Typescript Node Xbox-Live API
+I've written this project because I couldn't find a modern Nodejs library that can access xbox live resources via API calls.
 
-Requires a valid microsoft account.
+_Requires a valid microsoft account_
 
 ### Functionality:<br/>
 *Get*:
 - Xbox user id by username.
-- A user's clips (up to 200)
-- A user's screenshots (up to 200)
+- A player's clips (with pagination)
+- A user's screenshots (with pagination)
 
 ### How to use:
 `npm install async-xbox-live-api`<br/>
 ##### Then:<br/>
 *pre-es6:*<br/>
-`var xla = require('async-xbox-live-api');`<br/>
+`const xla = require('async-xbox-live-api');`<br/>
 *es6:*<br/>
-`import xla from 'async-xbox-live-api';`
+`import * as xla from 'async-xbox-live-api';`
 
-Next you should insert your credentials for the microsoft account you want to connect to:<br/>
+Next you should insert your credentials via the environment variables:<br/>
 ```
-xla.username = (xbox live username)
-xla.password = (xbox live password)
+XBL_USERNAME=
+XBL_PASSWORD=
 ```
+*NOTE:*<br/>
+This library supports .env files, an .env.example file is included
 <br/>
 <br/>
 
