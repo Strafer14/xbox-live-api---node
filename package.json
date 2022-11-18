@@ -2,9 +2,12 @@
   "name": "async-xbox-live-api",
   "version": "1.0.6",
   "description": "Async library to enable you to interact with the xbox live api",
-  "main": "xbox-live-async-api.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "prepublish": "tsc",
     "typecheck": "tsc --noEmit",
     "start": "ts-node index.ts",
     "prettier-format": "prettier --config .prettierrc 'lib/**/*.ts' --write",
