@@ -1,0 +1,19 @@
+{
+    "env": {
+        "browser": true,
+        "es2021": true
+    },
+    "plugins": ["prettier"],
+    "extends": ["standard-with-typescript", "plugin:prettier/recommended"],
+    "overrides": [],
+    "parserOptions": {
+        "ecmaVersion": "latest",
+        "sourceType": "module",
+        "project": "./tsconfig.json"
+    },
+    "rules": {
+        "prettier/prettier": "error",
+        "no-useless-escape": 0,
+        "@typescript-eslint/strict-boolean-expressions": 0
+    }
+}
