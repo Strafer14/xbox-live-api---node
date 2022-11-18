@@ -2,24 +2,24 @@ import axios from 'axios';
 import fetch from 'node-fetch';
 import querystring from 'querystring';
 import url from 'url';
-import { CacheKeys, xlaCache } from './cache';
+import { CacheKeys, xlaCache } from '../cache';
 import {
   AccessTokenResult,
   AuthenticationResponse,
   AuthResult,
   GetAuthResult,
   PreAuthResult
-} from './types';
+} from '../types';
 import {
   convertToTimestamp,
   extractUrlPostAndPpftRe,
   generatePostValues,
   parseCookies
-} from './util';
+} from '../util';
 
 const HOST = 'login.live.com';
 
-const fetchPreAuthData = async (): Promise<PreAuthResult> => {
+export const fetchPreAuthData = async (): Promise<PreAuthResult> => {
   // cache solution to store the tokens in cache
   const cacheUrlPost = await xlaCache.get<string>(CacheKeys.URL_POST);
   const cachePpftRe = await xlaCache.get<string>(CacheKeys.PPFT_RE);
@@ -57,7 +57,9 @@ const fetchPreAuthData = async (): Promise<PreAuthResult> => {
   return { url_post: urlPost, ppft_re: ppftRe, cookies: stringifiedCookies };
 };
 
-const fetchInitialAccessToken = async (): Promise<AccessTokenResult> => {
+export const fetchInitialAccessToken = async (
+  options: PreAuthResult
+): Promise<AccessTokenResult> => {
   const cacheAccessToken = await xlaCache.get<string>(CacheKeys.ACCESS_TOKEN);
   const cacheCookies = await xlaCache.get<string>(CacheKeys.COOKIES);
   if (cacheAccessToken.isCached && cacheCookies.isCached) {
@@ -65,11 +67,7 @@ const fetchInitialAccessToken = async (): Promise<AccessTokenResult> => {
     const cookies = cacheCookies.value as string;
     return { cookies, accessToken };
   } else {
-    const {
-      ppft_re: ppftRe,
-      url_post: urlPost,
-      cookies
-    } = await fetchPreAuthData();
+    const { ppft_re: ppftRe, url_post: urlPost, cookies } = options;
     const postValues = generatePostValues(ppftRe);
     // eslint-disable-next-line n/no-deprecated-api
     const { path } = url.parse(urlPost);
@@ -99,7 +97,9 @@ const fetchInitialAccessToken = async (): Promise<AccessTokenResult> => {
   }
 };
 
-const authenticate = async (): Promise<AuthResult> => {
+export const authenticate = async (
+  options: AccessTokenResult
+): Promise<AuthResult> => {
   const cacheToken = await xlaCache.get<string>(CacheKeys.TOKEN);
   const cacheUhs = await xlaCache.get<string>(CacheKeys.UHS);
   const cacheNotAfter = await xlaCache.get<string>(CacheKeys.NOT_AFTER);
@@ -112,7 +112,7 @@ const authenticate = async (): Promise<AuthResult> => {
       cookies: cacheCookies.value as string
     };
   else {
-    const { cookies, accessToken } = await fetchInitialAccessToken();
+    const { cookies, accessToken } = options;
     const payload = {
       RelyingParty: 'http://auth.xboxlive.com',
       TokenType: 'JWT',
@@ -144,7 +144,9 @@ const authenticate = async (): Promise<AuthResult> => {
   }
 };
 
-export const getAuthorization = async (): Promise<GetAuthResult> => {
+export const authorize = async (
+  options: AuthResult
+): Promise<GetAuthResult> => {
   const cacheNotAfter = await xlaCache.get<string>(CacheKeys.NOT_AFTER);
   const cacheAuthorizationHeader = await xlaCache.get<string>(
     CacheKeys.AUTHORIZATION_HEADER
@@ -156,7 +158,7 @@ export const getAuthorization = async (): Promise<GetAuthResult> => {
       // restart the authentication proccess
       console.log('Refreshing Xbox tokens');
       await xlaCache.clear();
-      await getAuthorization();
+      await authorize(options);
     }
   }
   if (cacheAuthorizationHeader.isCached) {
@@ -165,7 +167,7 @@ export const getAuthorization = async (): Promise<GetAuthResult> => {
       authorizationHeader: cacheAuthorizationHeader.value as string
     };
   } else {
-    let { token, uhs, notAfter, cookies } = await authenticate();
+    let { token, uhs, notAfter, cookies } = options;
     const payload = {
       RelyingParty: 'http://xboxlive.com',
       TokenType: 'JWT',
@@ -189,5 +191,3 @@ export const getAuthorization = async (): Promise<GetAuthResult> => {
     return { cookies, authorizationHeader };
   }
 };
-
-// the flow is consecutive, with caching between each step
