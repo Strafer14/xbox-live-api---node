@@ -186,11 +186,10 @@ export const getAuthorization = async (): Promise<string> => {
       payload,
       requestOptions
     );
-    // xid = str.DisplayClaims.xui[0].xid;
     uhs = data.DisplayClaims.xui[0].uhs;
     notAfter = data.NotAfter;
     token = data.Token;
-    const authorizationHeader = 'XBL3.0 x=' + uhs + ';' + token;
+    const authorizationHeader = `XBL3.0 x=${uhs};${token}`;
 
     await Promise.all([
       xlaCache.set(CacheKeys.NOT_AFTER, notAfter),
