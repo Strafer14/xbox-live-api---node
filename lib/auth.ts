@@ -2,7 +2,13 @@ import axios from 'axios';
 import querystring from 'querystring';
 import url from 'url';
 import { CacheKeys, xlaCache } from './cache';
-import { AccessTokenResponse, AuthResponse, PreAuthResult } from './types';
+import {
+  AccessTokenResult,
+  AuthenticationResponse,
+  AuthorizationResponse,
+  AuthResult,
+  PreAuthResult
+} from './types';
 import {
   convertToTimestamp,
   extractUrlPostAndPpftRe,
@@ -46,7 +52,7 @@ const fetchPreAuthData = async (): Promise<PreAuthResult> => {
   return { url_post: urlPost, ppft_re: ppftRe };
 };
 
-const fetchInitialAccessToken = async (): Promise<AccessTokenResponse> => {
+const fetchInitialAccessToken = async (): Promise<AccessTokenResult> => {
   const cacheAccessToken = await xlaCache.get<string>(CacheKeys.ACCESS_TOKEN);
   const cacheCookies = await xlaCache.get<string>(CacheKeys.COOKIES);
   if (cacheAccessToken.isCached && cacheCookies.isCached) {
@@ -106,7 +112,7 @@ const fetchInitialAccessToken = async (): Promise<AccessTokenResponse> => {
   }
 };
 
-const authenticate = async (): Promise<AuthResponse> => {
+const authenticate = async (): Promise<AuthResult> => {
   const cacheToken = await xlaCache.get<string>(CacheKeys.TOKEN);
   const cacheUhs = await xlaCache.get<string>(CacheKeys.UHS);
   const cacheNotAfter = await xlaCache.get<string>(CacheKeys.NOT_AFTER);
@@ -132,7 +138,7 @@ const authenticate = async (): Promise<AuthResponse> => {
         Cookie: cookies
       }
     };
-    const { data } = await axios.post(
+    const { data } = await axios.post<AuthenticationResponse>(
       'https://user.auth.xboxlive.com/user/authenticate',
       payload,
       requestOptions
@@ -181,7 +187,7 @@ export const getAuthorization = async (): Promise<string> => {
         Cookie: cookies
       }
     };
-    const { data } = await axios.post(
+    const { data } = await axios.post<AuthorizationResponse>(
       'https://xsts.auth.xboxlive.com/xsts/authorize',
       payload,
       requestOptions
