@@ -1,4 +1,5 @@
 import axios from 'axios';
+import fetch from 'node-fetch';
 import querystring from 'querystring';
 import url from 'url';
 import { CacheKeys, xlaCache } from './cache';
@@ -15,41 +16,44 @@ import {
   parseCookies
 } from './util';
 
+const HOST = 'login.live.com';
+
 const fetchPreAuthData = async (): Promise<PreAuthResult> => {
   // cache solution to store the tokens in cache
   const cacheUrlPost = await xlaCache.get<string>(CacheKeys.URL_POST);
   const cachePpftRe = await xlaCache.get<string>(CacheKeys.PPFT_RE);
-  if (cacheUrlPost.isCached && cachePpftRe.isCached) {
+  const cacheCookies = await xlaCache.get<string>(CacheKeys.COOKIES);
+  if (cacheUrlPost.isCached && cachePpftRe.isCached && cacheCookies.isCached) {
     const urlPost = cacheUrlPost.value as string;
     const ppftRe = cachePpftRe.value as string;
-    return { url_post: urlPost, ppft_re: ppftRe };
+    const cookies = cacheCookies.value as string;
+    return { url_post: urlPost, ppft_re: ppftRe, cookies };
   }
   const postValues = {
     client_id: '0000000048093EE3',
-    redirect_uri: 'https://login.live.com/oauth20_desktop.srf',
+    redirect_uri: `https://${HOST}/oauth20_desktop.srf`,
     response_type: 'token',
     display: 'touch',
     scope: 'service::user.auth.xboxlive.com::MBI_SSL',
     locale: 'en'
   };
   const postValuesQueryParams = unescape(querystring.stringify(postValues));
-  const options = {
-    headers: {
-      // without a capitalized Host header this part won't work properly (won't show redirect_uri needed for the next part)
-      Host: 'login.live.com'
-    }
-  };
-  const xruReq = await axios.get<string>(
-    `https://login.live.com/oauth20_authorize.srf?${postValuesQueryParams}`,
+  const options = { headers: { Host: HOST } };
+  const xruReq = await fetch(
+    `https://${HOST}/oauth20_authorize.srf?${postValuesQueryParams}`,
     options
   );
-  const { data: payload } = xruReq;
+  const { headers } = xruReq;
+  const payload = await xruReq.text();
   const { urlPost, ppftRe } = extractUrlPostAndPpftRe(payload);
+  const cookies = headers.get('set-cookie')?.split(', ') ?? [];
+  const stringifiedCookies = parseCookies(cookies);
   await Promise.all([
-    xlaCache.set('url_post', urlPost),
-    xlaCache.set('ppft_re', ppftRe)
+    xlaCache.set(CacheKeys.URL_POST, urlPost),
+    xlaCache.set(CacheKeys.PPFT_RE, ppftRe),
+    xlaCache.set(CacheKeys.COOKIES, stringifiedCookies)
   ]);
-  return { url_post: urlPost, ppft_re: ppftRe };
+  return { url_post: urlPost, ppft_re: ppftRe, cookies: stringifiedCookies };
 };
 
 const fetchInitialAccessToken = async (): Promise<AccessTokenResult> => {
@@ -60,7 +64,11 @@ const fetchInitialAccessToken = async (): Promise<AccessTokenResult> => {
     const cookies = cacheCookies.value as string;
     return { cookies, accessToken };
   } else {
-    const { ppft_re: ppftRe, url_post: urlPost } = await fetchPreAuthData();
+    const {
+      ppft_re: ppftRe,
+      url_post: urlPost,
+      cookies
+    } = await fetchPreAuthData();
     const postValues = {
       login: process.env.XBL_USERNAME,
       passwd: process.env.XBL_PASSWORD,
@@ -83,29 +91,29 @@ const fetchInitialAccessToken = async (): Promise<AccessTokenResult> => {
     if (!path) {
       throw new Error('No path found on query params');
     }
-    const accessTokenResponse = await axios.post<string>(
-      `https://login.live.com${path}`,
-      querystring.stringify(postValues),
-      { headers: { 'User-Agent': '' } }
-    );
-    if ([302, 200].includes(accessTokenResponse.status)) {
-      const cookies = accessTokenResponse.headers['set-cookie'] ?? [];
-      if (!cookies.length) {
-        throw new Error(
-          'Could not fight appropriate cookies from accessTokenResponse request'
-        );
+    const accessTokenResponse = await fetch(`https://${HOST}${path}`, {
+      method: 'POST',
+      body: querystring.stringify(postValues),
+      headers: {
+        Cookie: cookies,
+        'Content-Type': 'application/x-www-form-urlencoded'
       }
-      const stringifiedCookies = parseCookies(cookies);
+    });
+    if ([302, 200].includes(accessTokenResponse.status)) {
+      // if parsing empty array, returns empty string ''
+      const stringifiedCookies = parseCookies(
+        accessTokenResponse.headers.get('set-cookie')?.split(', ') ?? []
+      );
       const accessToken =
-        accessTokenResponse.headers.location?.match(/access_token=(.+?)&/)?.[1];
+        accessTokenResponse.url?.match(/access_token=(.+?)&/)?.[1];
       if (!accessToken) {
         throw new Error('Could not get find location header');
       }
-      await Promise.all([
-        xlaCache.set('cookie', stringifiedCookies),
-        xlaCache.set('access_token', accessToken)
-      ]);
-      return { cookies: stringifiedCookies, accessToken };
+      if (stringifiedCookies) {
+        await xlaCache.set('cookie', stringifiedCookies);
+      }
+      await xlaCache.set('access_token', accessToken);
+      return { cookies: stringifiedCookies || cookies, accessToken };
     } else {
       throw new Error('Could not get access token');
     }

@@ -12,7 +12,7 @@ export async function getXuid(gamertag: string): Promise<number> {
     return cacheXuid.value as number;
   } else {
     const host = 'profile.xboxlive.com';
-    const uri = `/users/gt("${encodeURIComponent(gamertag)}")/profile/settings`;
+    const uri = `/users/gt(${encodeURIComponent(gamertag)})/profile/settings`;
     const data = await internalRequest(host, uri);
     if (!data.profileUsers?.length) {
       data.profileUsers = [{ id: -1 }];

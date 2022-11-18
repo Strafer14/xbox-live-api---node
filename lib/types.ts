@@ -7,6 +7,7 @@ export interface AuthResult {
 export interface PreAuthResult {
   url_post: string;
   ppft_re: string;
+  cookies: string;
 }
 
 export interface AccessTokenResult {

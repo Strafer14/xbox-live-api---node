@@ -10,3 +10,5 @@ xlaCache
     getXuid('Ninja').then(console.log).catch(console.error);
   })
   .catch(console.error);
+
+// getXuid('Ninja').then(console.log).catch(console.error);
