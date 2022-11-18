@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { getAuthorization } from './auth';
-import { xlaCache } from './cache';
+import { CacheKeys, xlaCache } from './cache';
 
 /*
  * Exchanges a gamertag for Xbox Live xuid
@@ -88,19 +88,13 @@ export async function getScreenshotsForGamer(gamertag: string): Promise<any> {
  * Performs requests, this is an internal method.
  */
 const internalRequest = async (host: string, uri: string): Promise<any> => {
-  let cookie;
   const useragent =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36';
   const authorizationHeader = await getAuthorization();
-  const cacheCookie = await xlaCache.get<string>('cookie');
-  try {
-    cookie = cacheCookie.value;
-  } catch (err) {
-    console.error('Failed to get cookie');
-  }
+  const { value: cookies } = await xlaCache.get<string>(CacheKeys.COOKIES);
   const requestOptions = {
     headers: {
-      Cookie: cookie,
+      Cookie: cookies,
       'Content-Type': 'application/json',
       'x-xbl-contract-version': '2',
       'User-Agent': `${useragent} Like SmartGlass/2.105.0415 CFNetwork/711.3.18 Darwin/14.0.0`,

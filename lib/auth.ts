@@ -1,8 +1,8 @@
-import axios, { AxiosRequestConfig } from 'axios';
+import axios from 'axios';
 import querystring from 'querystring';
 import url from 'url';
-import { xlaCache } from './cache';
-import { AuthResponse, PreAuthResult } from './types';
+import { CacheKeys, xlaCache } from './cache';
+import { AccessTokenResponse, AuthResponse, PreAuthResult } from './types';
 import {
   convertToTimestamp,
   extractUrlPostAndPpftRe,
@@ -11,8 +11,8 @@ import {
 
 const fetchPreAuthData = async (): Promise<PreAuthResult> => {
   // cache solution to store the tokens in cache
-  const cacheUrlPost = await xlaCache.get<string>('url_post');
-  const cachePpftRe = await xlaCache.get<string>('ppft_re');
+  const cacheUrlPost = await xlaCache.get<string>(CacheKeys.URL_POST);
+  const cachePpftRe = await xlaCache.get<string>(CacheKeys.PPFT_RE);
   if (cacheUrlPost.isCached && cachePpftRe.isCached) {
     const urlPost = cacheUrlPost.value as string;
     const ppftRe = cachePpftRe.value as string;
@@ -37,25 +37,24 @@ const fetchPreAuthData = async (): Promise<PreAuthResult> => {
     `https://login.live.com/oauth20_authorize.srf?${postValuesQueryParams}`,
     options
   );
-  const cookies = xruReq.headers['set-cookie'] ?? [];
   const { data: payload } = xruReq;
   const { urlPost, ppftRe } = extractUrlPostAndPpftRe(payload);
   await Promise.all([
-    xlaCache.set('cookie', parseCookies(cookies)),
     xlaCache.set('url_post', urlPost),
     xlaCache.set('ppft_re', ppftRe)
   ]);
   return { url_post: urlPost, ppft_re: ppftRe };
 };
 
-const fetchInitialAccessToken = async (): Promise<string> => {
-  const cacheAccessToken = await xlaCache.get<string>('access_token');
-  if (cacheAccessToken.isCached) {
+const fetchInitialAccessToken = async (): Promise<AccessTokenResponse> => {
+  const cacheAccessToken = await xlaCache.get<string>(CacheKeys.ACCESS_TOKEN);
+  const cacheCookies = await xlaCache.get<string>(CacheKeys.COOKIES);
+  if (cacheAccessToken.isCached && cacheCookies.isCached) {
     const accessToken = cacheAccessToken.value as string;
-    return accessToken;
+    const cookies = cacheCookies.value as string;
+    return { cookies, accessToken };
   } else {
     const { ppft_re: ppftRe, url_post: urlPost } = await fetchPreAuthData();
-    const { value: cookie } = await xlaCache.get<string>('cookie');
     const postValues = {
       login: process.env.XBL_USERNAME,
       passwd: process.env.XBL_PASSWORD,
@@ -78,22 +77,10 @@ const fetchInitialAccessToken = async (): Promise<string> => {
     if (!path) {
       throw new Error('No path found on query params');
     }
-
-    const requestOptions: AxiosRequestConfig = {
-      headers: {
-        Cookie: cookie,
-        'User-Agent': ''
-      }
-      // {
-      //   Cookie: cookie,
-      //   'Content-Type': 'application/x-www-form-urlencoded',
-      //   'Content-Length': Buffer.byteLength(postValuesQueryParams, 'utf8')
-      // }
-    };
     const accessTokenResponse = await axios.post<string>(
       `https://login.live.com${path}`,
       querystring.stringify(postValues),
-      requestOptions
+      { headers: { 'User-Agent': '' } }
     );
     if ([302, 200].includes(accessTokenResponse.status)) {
       const cookies = accessTokenResponse.headers['set-cookie'] ?? [];
@@ -102,14 +89,17 @@ const fetchInitialAccessToken = async (): Promise<string> => {
           'Could not fight appropriate cookies from accessTokenResponse request'
         );
       }
-      await xlaCache.set('cookie', parseCookies(cookies));
+      const stringifiedCookies = parseCookies(cookies);
       const accessToken =
         accessTokenResponse.headers.location?.match(/access_token=(.+?)&/)?.[1];
       if (!accessToken) {
         throw new Error('Could not get find location header');
       }
-      await xlaCache.set('access_token', accessToken);
-      return accessToken;
+      await Promise.all([
+        xlaCache.set('cookie', stringifiedCookies),
+        xlaCache.set('access_token', accessToken)
+      ]);
+      return { cookies: stringifiedCookies, accessToken };
     } else {
       throw new Error('Could not get access token');
     }
@@ -117,10 +107,9 @@ const fetchInitialAccessToken = async (): Promise<string> => {
 };
 
 const authenticate = async (): Promise<AuthResponse> => {
-  let cookie;
-  const cacheToken = await xlaCache.get<string>('token');
-  const cacheUhs = await xlaCache.get<string>('uhs');
-  const cacheNotAfter = await xlaCache.get<string>('notAfter');
+  const cacheToken = await xlaCache.get<string>(CacheKeys.TOKEN);
+  const cacheUhs = await xlaCache.get<string>(CacheKeys.UHS);
+  const cacheNotAfter = await xlaCache.get<string>(CacheKeys.NOT_AFTER);
   if (cacheToken.isCached && cacheUhs.isCached && cacheNotAfter.isCached)
     return {
       token: cacheToken.value as string,
@@ -128,13 +117,7 @@ const authenticate = async (): Promise<AuthResponse> => {
       notAfter: cacheNotAfter.value as string
     };
   else {
-    const accessToken = await fetchInitialAccessToken();
-    const cacheCookie = await xlaCache.get<string>('cookie');
-    try {
-      cookie = cacheCookie.value;
-    } catch (err) {
-      console.log('Failed to get cookie');
-    }
+    const { cookies, accessToken } = await fetchInitialAccessToken();
     const payload = {
       RelyingParty: 'http://auth.xboxlive.com',
       TokenType: 'JWT',
@@ -145,40 +128,31 @@ const authenticate = async (): Promise<AuthResponse> => {
       }
     };
     const requestOptions = {
-      uri: 'https://user.auth.xboxlive.com' + '/user/authenticate',
-      method: 'POST',
-      resolveWithFullResponse: true,
-      body: JSON.stringify(payload),
       headers: {
-        Cookie: cookie,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(JSON.stringify(payload), 'utf8')
+        Cookie: cookies
       }
     };
-    const authentication = await axios(requestOptions);
-    if (authentication.status !== 200)
-      console.log('Authentication XBL statusCode: ', authentication.status);
-    let str = authentication.data;
-    try {
-      str = JSON.parse(str);
-    } catch (e) {
-      console.error(e);
-    }
-    const notAfter = str.NotAfter;
-    const token = str.Token;
-    const uhs = str.DisplayClaims.xui[0].uhs;
-    await xlaCache.set('notAfter', notAfter);
-    await xlaCache.set('token', token);
-    await xlaCache.set('uhs', uhs);
+    const { data } = await axios.post(
+      'https://user.auth.xboxlive.com/user/authenticate',
+      payload,
+      requestOptions
+    );
+    const notAfter = data.NotAfter;
+    const token = data.Token;
+    const uhs = data.DisplayClaims.xui[0].uhs;
+    await Promise.all([
+      xlaCache.set('notAfter', notAfter),
+      xlaCache.set('token', token),
+      xlaCache.set('uhs', uhs)
+    ]);
     return { token, uhs, notAfter };
   }
 };
 
 export const getAuthorization = async (): Promise<string> => {
-  let cookie;
-  const cacheNotAfter = await xlaCache.get<string>('notAfter');
+  const cacheNotAfter = await xlaCache.get<string>(CacheKeys.NOT_AFTER);
   const cacheAuthorizationHeader = await xlaCache.get<string>(
-    'authorizationHeader'
+    CacheKeys.AUTHORIZATION_HEADER
   );
   if (cacheNotAfter.isCached) {
     const notAfter = convertToTimestamp(cacheNotAfter.value as string);
@@ -193,12 +167,7 @@ export const getAuthorization = async (): Promise<string> => {
     return cacheAuthorizationHeader.value as string;
   } else {
     let { token, uhs, notAfter } = await authenticate();
-    const cacheCookie = await xlaCache.get<string>('cookie');
-    try {
-      cookie = cacheCookie.value;
-    } catch (err) {
-      console.log('Failed to get cookie');
-    }
+    const { value: cookies } = await xlaCache.get<string>(CacheKeys.COOKIES);
     const payload = {
       RelyingParty: 'http://xboxlive.com',
       TokenType: 'JWT',
@@ -208,33 +177,25 @@ export const getAuthorization = async (): Promise<string> => {
       }
     };
     const requestOptions = {
-      uri: 'https://xsts.auth.xboxlive.com' + '/xsts/authorize',
-      method: 'POST',
-      body: JSON.stringify(payload),
-      resolveWithFullResponse: true,
       headers: {
-        Cookie: cookie,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(JSON.stringify(payload), 'utf8')
+        Cookie: cookies
       }
     };
-    const authorization = await axios(requestOptions);
-    if (authorization.status !== 200)
-      console.log('Authorization XBL statusCode: ', authorization.status);
-    let str = authorization.data;
-    try {
-      str = JSON.parse(str);
-    } catch (e) {
-      console.error(e);
-    }
+    const { data } = await axios.post(
+      'https://xsts.auth.xboxlive.com/xsts/authorize',
+      payload,
+      requestOptions
+    );
     // xid = str.DisplayClaims.xui[0].xid;
-    uhs = str.DisplayClaims.xui[0].uhs;
-    notAfter = str.NotAfter;
-    token = str.Token;
+    uhs = data.DisplayClaims.xui[0].uhs;
+    notAfter = data.NotAfter;
+    token = data.Token;
     const authorizationHeader = 'XBL3.0 x=' + uhs + ';' + token;
 
-    await xlaCache.set('notAfter', notAfter);
-    await xlaCache.set('authorizationHeader', authorizationHeader);
+    await Promise.all([
+      xlaCache.set(CacheKeys.NOT_AFTER, notAfter),
+      xlaCache.set(CacheKeys.AUTHORIZATION_HEADER, authorizationHeader)
+    ]);
     return authorizationHeader;
   }
 };

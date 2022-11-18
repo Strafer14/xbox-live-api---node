@@ -14,9 +14,9 @@ declare module 'async-disk-cache' {
   }
 
   export default class Cache {
-    constructor(key: string, options: Options = {});
+    constructor(key: string, options?: Partial<Options>);
     get<T>(key: string): Promise<CacheEntry<T>>;
-    set(key: string, value: T): Promise<void>;
+    set<T>(key: string, value: T): Promise<void>;
     clear(): Promise<void>;
     remove(key: string): Promise<void>;
   }
