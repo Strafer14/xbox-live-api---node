@@ -1,14 +1,6 @@
 import * as dotenv from 'dotenv';
-import { getXuid } from './lib/api';
-import { xlaCache } from './lib/cache';
+import { getDetailsForClip } from './lib/api';
 dotenv.config();
 
-xlaCache
-  .clear()
-  .then(() => {
-    console.log('Cache cleared');
-    getXuid('Ninja').then(console.log).catch(console.error);
-  })
-  .catch(console.error);
-
-// getXuid('Ninja').then(console.log).catch(console.error);
+const clipId = '271d86e5-8aec-430f-850b-70a49807d9b119';
+getDetailsForClip('Ninja', clipId).then(console.log).catch(console.error);

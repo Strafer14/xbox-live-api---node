@@ -6,13 +6,14 @@ import { CacheKeys, xlaCache } from './cache';
 import {
   AccessTokenResult,
   AuthenticationResponse,
-  AuthorizationResponse,
   AuthResult,
+  GetAuthResult,
   PreAuthResult
 } from './types';
 import {
   convertToTimestamp,
   extractUrlPostAndPpftRe,
+  generatePostValues,
   parseCookies
 } from './util';
 
@@ -69,28 +70,13 @@ const fetchInitialAccessToken = async (): Promise<AccessTokenResult> => {
       url_post: urlPost,
       cookies
     } = await fetchPreAuthData();
-    const postValues = {
-      login: process.env.XBL_USERNAME,
-      passwd: process.env.XBL_PASSWORD,
-      PPFT: ppftRe,
-      PPSX: 'Passpor',
-      SI: 'Sign In',
-      type: '11',
-      NewUser: '1',
-      LoginOptions: '1',
-      i3: '36728',
-      m1: '768',
-      m2: '1184',
-      m3: '0',
-      i12: '1',
-      i17: '0',
-      i18: '__Login_Host|1'
-    };
+    const postValues = generatePostValues(ppftRe);
     // eslint-disable-next-line n/no-deprecated-api
     const { path } = url.parse(urlPost);
     if (!path) {
       throw new Error('No path found on query params');
     }
+    // TODO: figure out how to make this request work with axios
     const accessTokenResponse = await fetch(`https://${HOST}${path}`, {
       method: 'POST',
       body: querystring.stringify(postValues),
@@ -100,20 +86,13 @@ const fetchInitialAccessToken = async (): Promise<AccessTokenResult> => {
       }
     });
     if ([302, 200].includes(accessTokenResponse.status)) {
-      // if parsing empty array, returns empty string ''
-      const stringifiedCookies = parseCookies(
-        accessTokenResponse.headers.get('set-cookie')?.split(', ') ?? []
-      );
       const accessToken =
         accessTokenResponse.url?.match(/access_token=(.+?)&/)?.[1];
       if (!accessToken) {
         throw new Error('Could not get find location header');
       }
-      if (stringifiedCookies) {
-        await xlaCache.set('cookie', stringifiedCookies);
-      }
       await xlaCache.set('access_token', accessToken);
-      return { cookies: stringifiedCookies || cookies, accessToken };
+      return { cookies, accessToken };
     } else {
       throw new Error('Could not get access token');
     }
@@ -124,11 +103,13 @@ const authenticate = async (): Promise<AuthResult> => {
   const cacheToken = await xlaCache.get<string>(CacheKeys.TOKEN);
   const cacheUhs = await xlaCache.get<string>(CacheKeys.UHS);
   const cacheNotAfter = await xlaCache.get<string>(CacheKeys.NOT_AFTER);
+  const cacheCookies = await xlaCache.get<string>(CacheKeys.COOKIES);
   if (cacheToken.isCached && cacheUhs.isCached && cacheNotAfter.isCached)
     return {
       token: cacheToken.value as string,
       uhs: cacheUhs.value as string,
-      notAfter: cacheNotAfter.value as string
+      notAfter: cacheNotAfter.value as string,
+      cookies: cacheCookies.value as string
     };
   else {
     const { cookies, accessToken } = await fetchInitialAccessToken();
@@ -159,15 +140,16 @@ const authenticate = async (): Promise<AuthResult> => {
       xlaCache.set('token', token),
       xlaCache.set('uhs', uhs)
     ]);
-    return { token, uhs, notAfter };
+    return { token, uhs, notAfter, cookies };
   }
 };
 
-export const getAuthorization = async (): Promise<string> => {
+export const getAuthorization = async (): Promise<GetAuthResult> => {
   const cacheNotAfter = await xlaCache.get<string>(CacheKeys.NOT_AFTER);
   const cacheAuthorizationHeader = await xlaCache.get<string>(
     CacheKeys.AUTHORIZATION_HEADER
   );
+  const cacheCookies = await xlaCache.get<string>(CacheKeys.COOKIES);
   if (cacheNotAfter.isCached) {
     const notAfter = convertToTimestamp(cacheNotAfter.value as string);
     if (notAfter - 1000 < Math.floor(Date.now() / 1000)) {
@@ -178,24 +160,19 @@ export const getAuthorization = async (): Promise<string> => {
     }
   }
   if (cacheAuthorizationHeader.isCached) {
-    return cacheAuthorizationHeader.value as string;
+    return {
+      cookies: cacheCookies.value as string,
+      authorizationHeader: cacheAuthorizationHeader.value as string
+    };
   } else {
-    let { token, uhs, notAfter } = await authenticate();
-    const { value: cookies } = await xlaCache.get<string>(CacheKeys.COOKIES);
+    let { token, uhs, notAfter, cookies } = await authenticate();
     const payload = {
       RelyingParty: 'http://xboxlive.com',
       TokenType: 'JWT',
-      Properties: {
-        UserTokens: [token],
-        SandboxId: 'RETAIL'
-      }
+      Properties: { UserTokens: [token], SandboxId: 'RETAIL' }
     };
-    const requestOptions = {
-      headers: {
-        Cookie: cookies
-      }
-    };
-    const { data } = await axios.post<AuthorizationResponse>(
+    const requestOptions = { headers: { Cookie: cookies } };
+    const { data } = await axios.post<AuthenticationResponse>(
       'https://xsts.auth.xboxlive.com/xsts/authorize',
       payload,
       requestOptions
@@ -209,6 +186,8 @@ export const getAuthorization = async (): Promise<string> => {
       xlaCache.set(CacheKeys.NOT_AFTER, notAfter),
       xlaCache.set(CacheKeys.AUTHORIZATION_HEADER, authorizationHeader)
     ]);
-    return authorizationHeader;
+    return { cookies, authorizationHeader };
   }
 };
+
+// the flow is consecutive, with caching between each step
