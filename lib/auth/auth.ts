@@ -19,6 +19,8 @@ import {
 
 const HOST = 'login.live.com';
 
+const ONE_HOUR = 3600;
+
 export const fetchPreAuthData = async (): Promise<PreAuthResult> => {
   // cache solution to store the tokens in cache
   const cacheUrlPost = await xlaCache.get<string>(CacheKeys.URL_POST);
@@ -89,7 +91,7 @@ export const fetchInitialAccessToken = async (
       if (!accessToken) {
         throw new Error('Could not get find location header');
       }
-      await xlaCache.set('access_token', accessToken);
+      await xlaCache.set(CacheKeys.ACCESS_TOKEN, accessToken);
       return { cookies, accessToken };
     } else {
       throw new Error('Could not get access token');
@@ -134,34 +136,24 @@ export const authenticate = async (
     );
     const notAfter = data.NotAfter;
     const token = data.Token;
-    const uhs = data.DisplayClaims.xui[0].uhs;
+    const userHash = data.DisplayClaims.xui[0].uhs;
     await Promise.all([
       xlaCache.set('notAfter', notAfter),
       xlaCache.set('token', token),
-      xlaCache.set('uhs', uhs)
+      xlaCache.set('uhs', userHash)
     ]);
-    return { token, uhs, notAfter, cookies };
+    return { token, uhs: userHash, notAfter, cookies };
   }
 };
 
 export const authorize = async (
   options: AuthResult
 ): Promise<GetAuthResult> => {
-  const cacheNotAfter = await xlaCache.get<string>(CacheKeys.NOT_AFTER);
   const cacheAuthorizationHeader = await xlaCache.get<string>(
     CacheKeys.AUTHORIZATION_HEADER
   );
   const cacheCookies = await xlaCache.get<string>(CacheKeys.COOKIES);
-  if (cacheNotAfter.isCached) {
-    const notAfter = convertToTimestamp(cacheNotAfter.value as string);
-    if (notAfter - 1000 < Math.floor(Date.now() / 1000)) {
-      // restart the authentication proccess
-      console.log('Refreshing Xbox tokens');
-      await xlaCache.clear();
-      await authorize(options);
-    }
-  }
-  if (cacheAuthorizationHeader.isCached) {
+  if (cacheAuthorizationHeader.isCached && cacheCookies.isCached) {
     return {
       cookies: cacheCookies.value as string,
       authorizationHeader: cacheAuthorizationHeader.value as string
@@ -189,5 +181,20 @@ export const authorize = async (
       xlaCache.set(CacheKeys.AUTHORIZATION_HEADER, authorizationHeader)
     ]);
     return { cookies, authorizationHeader };
+  }
+};
+
+export const validateTokenStillValid = async (): Promise<void> => {
+  const cacheNotAfter = await xlaCache.get<string>(CacheKeys.NOT_AFTER);
+  if (cacheNotAfter.isCached) {
+    const notAfterInSeconds = convertToTimestamp(cacheNotAfter.value as string);
+    const currentTimeInSeconds = Math.floor(Date.now() / 1000);
+    const isTokenAboutToExpire =
+      notAfterInSeconds - currentTimeInSeconds < ONE_HOUR;
+    if (isTokenAboutToExpire) {
+      // restart the authentication proccess
+      console.log('Refreshing Xbox tokens');
+      await xlaCache.clear();
+    }
   }
 };

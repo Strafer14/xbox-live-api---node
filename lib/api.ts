@@ -16,7 +16,7 @@ const mockUserData = {
 };
 
 /*
- * Exchanges a gamertag for Xbox Live xuid
+ * Exchanges a gamertag for Xbox Live User Id (xuid)
  * @param string gamertag
  */
 export async function getXuid(gamertag: string): Promise<string> {
@@ -26,7 +26,7 @@ export async function getXuid(gamertag: string): Promise<string> {
   } else {
     const host = 'profile.xboxlive.com';
     const uri = `/users/gt(${encodeURIComponent(gamertag)})/profile/settings`;
-    const data = await makeXliveRequest<GetXuidResponse>(host, uri);
+    const data = await _makeXliveApiRequest<GetXuidResponse>(host, uri);
     if (!data.profileUsers?.length) {
       data.profileUsers = [mockUserData];
       throw new Error(`Unable to pull origin user ${gamertag}`);
@@ -55,7 +55,7 @@ export async function getClipsForGamer(
   const uri = `/users/xuid(${xuid})/clips?maxItems=200&continuationToken=${
     continueToken ?? ''
   }`;
-  const data = await makeXliveRequest<GetClipsResponse>(host, uri);
+  const data = await _makeXliveApiRequest<GetClipsResponse>(host, uri);
   return data;
 }
 
@@ -105,14 +105,17 @@ export async function getScreenshotsForGamer(
   const uri = `/users/xuid(${xuid})/screenshots?maxItems=200&continuationToken=${
     continueToken ?? ''
   }`;
-  const data = await makeXliveRequest<GetScreenshotsResponse>(host, uri);
+  const data = await _makeXliveApiRequest<GetScreenshotsResponse>(host, uri);
   return data;
 }
 
 /*
  * Performs requests, this is an internal method.
  */
-const makeXliveRequest = async <T>(host: string, uri: string): Promise<T> => {
+const _makeXliveApiRequest = async <T>(
+  host: string,
+  uri: string
+): Promise<T> => {
   const useragent =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36';
   const { cookies, authorizationHeader } =

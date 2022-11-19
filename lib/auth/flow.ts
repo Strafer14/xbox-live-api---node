@@ -3,11 +3,13 @@ import {
   authenticate,
   fetchInitialAccessToken,
   fetchPreAuthData,
-  authorize
+  authorize,
+  validateTokenStillValid
 } from './auth';
 
 // the flow is consecutive, with caching between each step
 export async function fetchCookiesAndAuthorizationDetails(): Promise<GetAuthResult> {
+  await validateTokenStillValid();
   const resultOne = await fetchPreAuthData();
   const initialAccessToken = await fetchInitialAccessToken(resultOne);
   const authenticationResult = await authenticate(initialAccessToken);
