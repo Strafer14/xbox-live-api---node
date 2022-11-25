@@ -3,10 +3,12 @@ import { makeXliveApiRequest } from './request';
 import {
   Clip,
   GetAchievementsReponse,
+  GetActivityResponse,
   GetClipsResponse,
   GetScreenshotsResponse,
   GetXuidResponse
 } from './types';
+import { XboxLiveSubdomain } from './xblHosts';
 
 const mockUserData = {
   id: '-1',
@@ -24,7 +26,7 @@ export async function getXuid(gamertag: string): Promise<string> {
   if (cacheXuid.isCached) {
     return cacheXuid.value as string;
   } else {
-    const host = 'profile.xboxlive.com';
+    const host = XboxLiveSubdomain.PROFILE;
     const uri = `/users/gt(${encodeURIComponent(gamertag)})/profile/settings`;
     const data = await makeXliveApiRequest<GetXuidResponse>(host, uri);
     if (!data.profileUsers?.length) {
@@ -45,7 +47,7 @@ export async function getClipsForGamer(
   continueToken?: string
 ): Promise<GetClipsResponse> {
   const xuid = await getXuid(gamertag);
-  const host = 'gameclipsmetadata.xboxlive.com';
+  const host = XboxLiveSubdomain.CLIPS;
   const uri = `/users/xuid(${xuid})/clips?maxItems=200&continuationToken=${
     continueToken ?? ''
   }`;
@@ -88,7 +90,7 @@ export async function getScreenshotsForGamer(
   continueToken?: string
 ): Promise<GetScreenshotsResponse> {
   const xuid = await getXuid(gamertag);
-  const host = 'screenshotsmetadata.xboxlive.com';
+  const host = XboxLiveSubdomain.SCREEN_SHOT;
   const uri = `/users/xuid(${xuid})/screenshots?maxItems=200&continuationToken=${
     continueToken ?? ''
   }`;
@@ -105,24 +107,7 @@ export async function getAchievementsForGamer(
   continueToken?: string
 ): Promise<GetAchievementsReponse> {
   const xuid = await getXuid(gamertag);
-  const host = 'achievements.xboxlive.com';
-  const uri = `/users/xuid(${xuid})/history/titles?&continuationToken=${
-    continueToken ?? ''
-  }`;
-  const data = await makeXliveApiRequest<GetAchievementsReponse>(host, uri);
-  return data;
-}
-
-/*
- * Returns settings from Xbox Live.
- * @param string gamertag
- */
-export async function getSettingsForGamer(
-  gamertag: string,
-  continueToken?: string
-): Promise<GetAchievementsReponse> {
-  const xuid = await getXuid(gamertag);
-  const host = 'achievements.xboxlive.com';
+  const host = XboxLiveSubdomain.ACHIVEMENTS;
   const uri = `/users/xuid(${xuid})/history/titles?&continuationToken=${
     continueToken ?? ''
   }`;
@@ -137,12 +122,10 @@ export async function getSettingsForGamer(
 export async function getActivityForGamer(
   gamertag: string,
   continueToken?: string
-): Promise<GetAchievementsReponse> {
+): Promise<GetActivityResponse> {
   const xuid = await getXuid(gamertag);
-  const host = 'achievements.xboxlive.com';
-  const uri = `/users/xuid(${xuid})/history/titles?&continuationToken=${
-    continueToken ?? ''
-  }`;
-  const data = await makeXliveApiRequest<GetAchievementsReponse>(host, uri);
+  const host = XboxLiveSubdomain.AVTY;
+  const uri = `/users/xuid(${xuid})/activity/History`;
+  const data = await makeXliveApiRequest<GetActivityResponse>(host, uri);
   return data;
 }
