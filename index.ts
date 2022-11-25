@@ -2,4 +2,4 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 export * from './lib/api';
-export * as types from './lib/types';
+export { Clip, ScreenShot, Title, ActivityItem } from './lib/types';
