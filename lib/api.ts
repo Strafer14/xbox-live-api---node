@@ -29,9 +29,9 @@ export async function getXuid(gamertag: string): Promise<string> {
     const data = await makeXliveApiRequest<GetXuidResponse>(host, uri);
     if (!data.profileUsers?.length) {
       data.profileUsers = [mockUserData];
-      throw new Error(`Unable to pull origin user ${gamertag}`);
+      throw new Error(`Could not find ${gamertag} in Xbox Live API`);
     }
-    await xlaCache.set('xuidForGamertag-' + gamertag, data.profileUsers[0].id);
+    await xlaCache.set(`xuidForGamertag-${gamertag}`, data.profileUsers[0].id);
     return data.profileUsers[0].id;
   }
 }
@@ -97,10 +97,44 @@ export async function getScreenshotsForGamer(
 }
 
 /*
- * Returns up to 200 screenshots from Xbox Live.
+ * Returns achivements from Xbox Live.
  * @param string gamertag
  */
 export async function getAchievementsForGamer(
+  gamertag: string,
+  continueToken?: string
+): Promise<GetAchievementsReponse> {
+  const xuid = await getXuid(gamertag);
+  const host = 'achievements.xboxlive.com';
+  const uri = `/users/xuid(${xuid})/history/titles?&continuationToken=${
+    continueToken ?? ''
+  }`;
+  const data = await makeXliveApiRequest<GetAchievementsReponse>(host, uri);
+  return data;
+}
+
+/*
+ * Returns settings from Xbox Live.
+ * @param string gamertag
+ */
+export async function getSettingsForGamer(
+  gamertag: string,
+  continueToken?: string
+): Promise<GetAchievementsReponse> {
+  const xuid = await getXuid(gamertag);
+  const host = 'achievements.xboxlive.com';
+  const uri = `/users/xuid(${xuid})/history/titles?&continuationToken=${
+    continueToken ?? ''
+  }`;
+  const data = await makeXliveApiRequest<GetAchievementsReponse>(host, uri);
+  return data;
+}
+
+/*
+ * Returns player activity from Xbox Live.
+ * @param string gamertag
+ */
+export async function getActivityForGamer(
   gamertag: string,
   continueToken?: string
 ): Promise<GetAchievementsReponse> {
