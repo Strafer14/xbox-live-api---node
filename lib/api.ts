@@ -2,6 +2,7 @@ import { xlaCache } from './cache';
 import { makeXliveApiRequest } from './request';
 import {
   Clip,
+  GetAchievementsReponse,
   GetClipsResponse,
   GetScreenshotsResponse,
   GetXuidResponse
@@ -44,12 +45,6 @@ export async function getClipsForGamer(
   continueToken?: string
 ): Promise<GetClipsResponse> {
   const xuid = await getXuid(gamertag);
-  if (parseInt(xuid) < 0)
-    return {
-      gameClips: [],
-      pagingInfo: { continuationToken: '' }
-    };
-
   const host = 'gameclipsmetadata.xboxlive.com';
   const uri = `/users/xuid(${xuid})/clips?maxItems=200&continuationToken=${
     continueToken ?? ''
@@ -93,17 +88,27 @@ export async function getScreenshotsForGamer(
   continueToken?: string
 ): Promise<GetScreenshotsResponse> {
   const xuid = await getXuid(gamertag);
-  if (parseInt(xuid) < 0) {
-    return {
-      screenshots: [],
-      pagingInfo: { continuationToken: '' }
-    };
-  }
-
   const host = 'screenshotsmetadata.xboxlive.com';
   const uri = `/users/xuid(${xuid})/screenshots?maxItems=200&continuationToken=${
     continueToken ?? ''
   }`;
   const data = await makeXliveApiRequest<GetScreenshotsResponse>(host, uri);
+  return data;
+}
+
+/*
+ * Returns up to 200 screenshots from Xbox Live.
+ * @param string gamertag
+ */
+export async function getAchievementsForGamer(
+  gamertag: string,
+  continueToken?: string
+): Promise<GetAchievementsReponse> {
+  const xuid = await getXuid(gamertag);
+  const host = 'achievements.xboxlive.com';
+  const uri = `/users/xuid(${xuid})/history/titles?&continuationToken=${
+    continueToken ?? ''
+  }`;
+  const data = await makeXliveApiRequest<GetAchievementsReponse>(host, uri);
   return data;
 }

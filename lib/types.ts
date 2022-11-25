@@ -38,6 +38,11 @@ export interface GetXuidResponse {
   }>;
 }
 
+export interface PagingInfo {
+  continuationToken: string;
+  totalRecords?: number;
+}
+
 export interface Clip {
   gameClipId: string;
   state: string;
@@ -82,9 +87,7 @@ export interface Clip {
 
 export interface GetClipsResponse {
   gameClips: Clip[];
-  pagingInfo: {
-    continuationToken: string;
-  };
+  pagingInfo: PagingInfo;
 }
 
 export interface ScreenShot {
@@ -128,7 +131,22 @@ export interface ScreenShot {
 
 export interface GetScreenshotsResponse {
   screenshots: ScreenShot[];
-  pagingInfo: {
-    continuationToken: string;
-  };
+  pagingInfo: PagingInfo;
+}
+
+export interface Title {
+  lastUnlock: string;
+  titleId: number;
+  serviceConfigId: string;
+  titleType: string;
+  platform: string;
+  name: string;
+  earnedAchievements: number;
+  currentGamerscore: number;
+  maxGamerscore: number;
+}
+
+export interface GetAchievementsReponse {
+  titles: Title[];
+  pagingInfo: PagingInfo;
 }
