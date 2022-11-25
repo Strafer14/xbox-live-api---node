@@ -6,8 +6,12 @@ _Requires a valid microsoft account_
 ### Functionality:<br/>
 *Get*:
 - Xbox user id by username.
-- A player's clips (with pagination)
-- A user's screenshots (with pagination)
+- A player's:
+    1. Settings and xuid.
+    2. Clips (with pagination).
+    3. Screenshots (with pagination).
+    4. Achievements per title (with pagination).
+    5. Latest activity.
 
 ### How to use:
 `npm install async-xbox-live-api`<br/>
@@ -27,18 +31,34 @@ This library supports .env files, an .env.example file is included
 <br/>
 <br/>
 
+
+
 ### Methods:
 #### getXuid
 ```
-xla.getXuid('Ninja').then((resp) => console.log(resp))
+xla.getXuid('Ninja').then(console.log).catch(console.error);
 ```
 
 #### getClipsForGamer
 ```
-xla.getClipsForGamer('Ninja').then((resp) => console.log(resp))
+xla.getClipsForGamer('Ninja').then(console.log).catch(console.error);
 ```
 
 #### getScreenshotsForGamer
 ```
-xla.getScreenshotsForGamer('Ninja').then((resp) => console.log(resp))
+xla.getScreenshotsForGamer('Ninja').then(console.log).catch(console.error);
 ```
+
+#### getAchievementsForGamer
+```
+xla.getAchievementsForGamer('Ninja').then(console.log).catch(console.error);
+```
+
+#### getActivityForGamer
+```
+xla.getActivityForGamer('Ninja').then(console.log).catch(console.error);
+```
+<br/>
+
+### Types:
+Response types for API requests are included
