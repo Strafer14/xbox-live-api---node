@@ -125,7 +125,7 @@ export async function getActivityForGamer(
 ): Promise<GetActivityResponse> {
   const xuid = await getXuid(gamertag);
   const host = XboxLiveSubdomain.AVTY;
-  const uri = `/users/xuid(${xuid})/activity/History`;
+  const uri = `/users/xuid(${xuid})/activity/history`;
   const data = await makeXliveApiRequest<GetActivityResponse>(host, uri);
   return data;
 }
