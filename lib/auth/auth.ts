@@ -15,7 +15,7 @@ import {
   extractUrlPostAndPpftRe,
   generatePostValues,
   parseCookies
-} from '../util';
+} from './util';
 
 const HOST = 'login.live.com';
 
